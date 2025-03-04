@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>课堂管理系统 - 增强版</title>
+    <title>课堂管理系统 - 精准统计版</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -109,42 +109,13 @@
         .stat-cell {
             background-color: #fff3e0;
         }
-        #rankingTable tr:nth-child(1) td {
-            color: #ff9800;
-            font-weight: bold;
-        }
-        #rankingTable tr:nth-child(2) td {
-            color: #4caf50;
-            font-weight: bold;
-        }
-        #rankingTable tr:nth-child(3) td {
-            color: #2196f3;
-            font-weight: bold;
-        }
-        #scoreControls {
-            background-color: white;
-            padding: 20px;
-            border-radius: 15px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-            margin-bottom: 20px;
-        }
-        #scoreControls select,
-        #scoreControls input[type="number"] {
-            width: 100%;
-            padding: 8px;
-            margin: 5px 0;
-            border: 1px solid #ddd;
-            border-radius: 5px;
-        }
-        #scoreControls button {
-            width: 100%;
-            margin: 5px 0;
-        }
-        .stats-info {
-            text-align: right;
-            font-size: 12px;
+        #lastRecord {
             color: #666;
+            font-size: 14px;
             margin-top: 10px;
+        }
+        #lastRecord strong {
+            color: #1a73e8;
         }
     </style>
 </head>
@@ -160,7 +131,7 @@
             <button onclick="startRoll()">开始滚动</button>
             <button onclick="stopRoll()">停止滚动</button>
         </div>
-        <div class="stats-info">总随机次数：<span id="totalRolls">0</span></div>
+        <div id="lastRecord">最近记录：<strong>暂无记录</strong></div>
     </div>
     <!-- 积分排行榜 -->
     <div id="scoreboard">
@@ -197,25 +168,24 @@
             "崔梦凡", "刘爽", "刘海飞", "朱翔宇", "杨蕗萌", "孙悦晨", "周圣钰", "范智博", "马静文", "张斯博",
             "王丙枫", "高韵涛", "武梓欣", "谢浩然", "王宇航", "夏梦琪", "仝姗姗", "孙远旺", "卢宋郡", "吴俊东"
         ];
-        // 初始化数据存储
+        // 系统状态
         let scores = {};
         let rollCounts = {};
         let rollingInterval = null;
+        let currentSelection = [];
         // 初始化系统
         function initSystem() {
-            // 加载积分数据
+            // 加载存储数据
             const savedScores = localStorage.getItem("classroomScores");
             scores = savedScores ? JSON.parse(savedScores) : {};
-            if (Object.keys(scores).length === 0) {
-                students.forEach(student => scores[student] = 0);
-            }
-            // 加载随机次数
             const savedRolls = localStorage.getItem("classroomRolls");
             rollCounts = savedRolls ? JSON.parse(savedRolls) : {};
-            if (Object.keys(rollCounts).length === 0) {
-                students.forEach(student => rollCounts[student] = 0);
-            }
-            // 初始化学生选择器
+            // 数据校验
+            students.forEach(student => {
+                if (!(student in scores)) scores[student] = 0;
+                if (!(student in rollCounts)) rollCounts[student] = 0;
+            });
+            // 初始化选择器
             const selector = document.getElementById("studentSelector");
             selector.innerHTML = students.map(student => 
                 `<option value="${student}">${student}</option>`
@@ -230,7 +200,6 @@
         // 更新界面
         function updateUI() {
             updateRanking();
-            updateTotalRolls();
         }
         // 更新排行榜
         function updateRanking() {
@@ -265,11 +234,6 @@
                 tbody.appendChild(row);
             });
         }
-        // 更新总随机次数
-        function updateTotalRolls() {
-            const total = Object.values(rollCounts).reduce((a, b) => a + b, 0);
-            document.getElementById("totalRolls").textContent = total;
-        }
         // 随机点名功能
         function startRoll() {
             clearInterval(rollingInterval);
@@ -278,23 +242,33 @@
             const speed = 1000 / document.getElementById("speed").value;
             const count = parseInt(document.getElementById("randomCount").value);
             rollingInterval = setInterval(() => {
-                const selected = students
+                // 生成临时随机结果
+                currentSelection = students
                     .sort(() => Math.random() - 0.5)
-                    .slice(0, count)
-                    .forEach(student => rollCounts[student]++);
-                document.getElementById("rollingArea").textContent = 
-                    students.sort(() => Math.random() - 0.5)
-                           .slice(0, count)
-                           .join(", ");
-                saveData();
-                updateUI();
+                    .slice(0, count);
+                
+                document.getElementById("rollingArea").textContent = currentSelection.join(", ");
             }, speed);
         }
         // 停止滚动
         function stopRoll() {
             clearInterval(rollingInterval);
             document.getElementById("rollingArea").classList.remove("rolling");
-            updateUI();
+            if (currentSelection.length > 0) {
+                // 记录有效选择
+                currentSelection.forEach(student => {
+                    if (students.includes(student)) {
+                        rollCounts[student]++;
+                    }
+                });
+                // 更新显示
+                document.getElementById("lastRecord").innerHTML = 
+                    `最近记录：<strong>${currentSelection.join(", ")}</strong>（已保存）`;
+                
+                saveData();
+                updateUI();
+                currentSelection = [];
+            }
         }
         // 积分管理功能
         function addScore() {
@@ -321,8 +295,7 @@
         }
         // 启动系统
         initSystem();
-        // 自动保存
-        setInterval(saveData, 10000);
+        setInterval(saveData, 10000); // 每10秒自动保存
     </script>
 </body>
 </html>
