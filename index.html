@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>课堂管理系统</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            font-size: 32px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 20px;
+        }
+        #rollCall {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        #rollingArea {
+            height: 100px;
+            overflow: hidden;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            padding: 10px;
+            text-align: center;
+            font-size: 24px;
+            font-weight: bold;
+            color: #1a73e8;
+            margin-bottom: 10px;
+            background-color: #f8f9fa;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        #controls label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 14px;
+        }
+        #controls input[type="range"],
+        #controls input[type="number"] {
+            width: 100px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #1a73e8;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #1557b0;
+        }
+        #scoreboard {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        #rankingTable {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        #rankingTable th,
+        #rankingTable td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        #rankingTable th {
+            background-color: #f8f9fa;
+            color: #1a73e8;
+            font-weight: bold;
+        }
+        #rankingTable tr:nth-child(1) td {
+            color: #ff9800;
+            font-weight: bold;
+        }
+        #rankingTable tr:nth-child(2) td {
+            color: #4caf50;
+            font-weight: bold;
+        }
+        #rankingTable tr:nth-child(3) td {
+            color: #2196f3;
+            font-weight: bold;
+        }
+        #scoreControls {
+            background-color: white;
+            padding: 20px;
+            border-radius: 15px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+        #scoreControls select,
+        #scoreControls input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        #scoreControls button {
+            width: 100%;
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1 contenteditable="true">课堂管理系统</h1>
+    <!-- 点名区域 -->
+    <div id="rollCall">
+        <div id="rollingArea">点击开始滚动</div>
+        <div id="controls">
+            <label>速度：<input type="range" id="speed" min="1" max="10" value="5"></label>
+            <label>数量：<input type="number" id="randomCount" min="1" max="5" value="1"></label>
+            <button onclick="startRoll()">开始滚动</button>
+            <button onclick="stopRoll()">停止滚动</button>
+        </div>
+    </div>
+    <!-- 积分排行榜 -->
+    <div id="scoreboard">
+        <h2>积分排行榜</h2>
+        <table id="rankingTable">
+            <thead>
+                <tr>
+                    <th>排名</th>
+                    <th>姓名</th>
+                    <th>积分</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- 动态生成 -->
+            </tbody>
+        </table>
+    </div>
+    <!-- 积分增减按钮 -->
+    <div id="scoreControls">
+        <select id="studentSelector">
+            <!-- 动态生成 -->
+        </select>
+        <input type="number" id="scoreChange" value="1" min="1">
+        <button onclick="addScore()">加分</button>
+        <button onclick="deductScore()">扣分</button>
+    </div>
+    <script>
+        // 学生名单
+        const students = [
+            "朱青锋", "杨晓彤", "魏萌", "王蕊", "张欣", "邹雨虹", "潘蕊", "潘子萱", "娄贝贝", "陈冲",
+            "陈咏春", "王婷", "沈宝欣", "崔靖婕", "赵紫涵", "沈彬彬", "吴子强", "庄梦莹", "李语晨", "任慧茹",
+            "崔梦凡", "刘爽", "刘海飞", "朱翔宇", "杨蕗萌", "孙悦晨", "周圣钰", "范智博", "马静文", "张斯博",
+            "王丙枫", "高韵涛", "武梓欣", "谢浩然", "王宇航", "夏梦琪", "仝姗姗", "孙远旺", "卢宋郡", "吴俊东"
+        ];
+        // 初始化积分
+        let scores = {};
+        // 从 localStorage 加载积分数据
+        function loadScores() {
+            const savedScores = localStorage.getItem("scores");
+            if (savedScores) {
+                scores = JSON.parse(savedScores);
+            } else {
+                // 如果没有保存的数据，初始化所有学生积分为 0
+                students.forEach(student => {
+                    scores[student] = 0;
+                });
+            }
+        }
+        // 保存积分数据到 localStorage
+        function saveScores() {
+            localStorage.setItem("scores", JSON.stringify(scores));
+        }
+        // 生成学生选项
+        const studentSelector = document.getElementById("studentSelector");
+        students.forEach(student => {
+            const option = document.createElement("option");
+            option.value = student;
+            option.textContent = student;
+            studentSelector.appendChild(option);
+        });
+        // 更新排行榜
+        function updateRanking() {
+            const rankingTable = document.querySelector("#rankingTable tbody");
+            rankingTable.innerHTML = "";
+            // 排序
+            const sortedStudents = Object.keys(scores).sort((a, b) => scores[b] - scores[a]);
+            sortedStudents.forEach((student, index) => {
+                const row = document.createElement("tr");
+                const rankCell = document.createElement("td");
+                const nameCell = document.createElement("td");
+                const scoreCell = document.createElement("td");
+                rankCell.textContent = index + 1;
+                nameCell.textContent = student;
+                scoreCell.textContent = scores[student];
+                // 突出前三名
+                if (index === 0) {
+                    rankCell.textContent = "王者";
+                } else if (index === 1) {
+                    rankCell.textContent = "宗师";
+                } else if (index === 2) {
+                    rankCell.textContent = "大师";
+                }
+                row.appendChild(rankCell);
+                row.appendChild(nameCell);
+                row.appendChild(scoreCell);
+                rankingTable.appendChild(row);
+            });
+        }
+        // 加分
+        function addScore() {
+            const selectedStudent = studentSelector.value;
+            const scoreChange = parseInt(document.getElementById("scoreChange").value);
+            scores[selectedStudent] += scoreChange;
+            saveScores(); // 保存积分数据
+            updateRanking();
+        }
+        // 扣分
+        function deductScore() {
+            const selectedStudent = studentSelector.value;
+            const scoreChange = parseInt(document.getElementById("scoreChange").value);
+            scores[selectedStudent] = Math.max(0, scores[selectedStudent] - scoreChange);
+            saveScores(); // 保存积分数据
+            updateRanking();
+        }
+        // 随机点名
+        let rollingInterval;
+        function startRoll() {
+            clearInterval(rollingInterval);
+            const speed = 1000 / document.getElementById("speed").value;
+            const randomCount = parseInt(document.getElementById("randomCount").value);
+            rollingInterval = setInterval(() => {
+                const shuffledStudents = students.sort(() => Math.random() - 0.5);
+                const selectedStudents = shuffledStudents.slice(0, randomCount);
+                document.getElementById("rollingArea").textContent = selectedStudents.join(", ");
+            }, speed);
+        }
+        // 停止滚动
+        function stopRoll() {
+            clearInterval(rollingInterval);
+        }
+        // 初始化
+        loadScores(); // 加载积分数据
+        updateRanking(); // 更新排行榜
+    </script>
+</body>
+</html>
